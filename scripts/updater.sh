@@ -1,12 +1,31 @@
 #!/bin/bash
 
+GUI_PREFIX_SNIPPET() {
+    systemd-run --user --quiet --collect "$1"
+}
+
+TERM=konsole
+
+LOCK_FILE="$LOCK_DIR/updater.lock"
+
 
 prompt_for_update() {
     
+    # Check if the lock file exists
+    if [ -f "$LOCK_FILE" ]; then
+        echo "The function is already running."
+        exit
+        return 0  # Exit if the function is already running
+    fi
+
+    # Create the lock file to signal that the function is running
+    echo "$LOCK_FILE" has been created
+    touch "$LOCK_FILE"
+
     # Send a notification and capture the output
     decision=$(
-        notify-send "System Update Available" "Do you want to perform the system update now?" \
-        -A "Yes" -A "No" -a $host
+        notify-send -a $host "System Update Available" "Do you want to perform the system update now?" \
+        -A "Yes" -A "No"
         )
 
     # Print decision based on output
@@ -17,8 +36,10 @@ prompt_for_update() {
         echo "Updating system..."
         updater&
     else
-        echo "Not updating system."
+        echo "Not updating system"
+        rm $LOCK_FILE
     fi
+
 }
 
 check_updates() {
@@ -102,17 +123,20 @@ updater() {
     # Open a new terminal window to perform the update interactively
     case $distro in
         "arch")
-            konsole -e "sudo pacman -Syu" && notify-send 'Update Complete' 'Your system is up to date.'; date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update";
+            systemd-run --user --quiet --collect konsole -e "sudo pacman -Syu" && notify-send 'Update Complete' 'Your system is up to date.' && date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update" && rm "$LOCK_FILE"
             ;;
         "debian")
-            xterm -e "sudo apt update && sudo apt upgrade" && notify-send 'Update Complete' 'Your system is up to date.'; date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update"
+            systemd-run --user --quiet --collect konsole -e "sudo apt update && sudo apt upgrade" && notify-send 'Update Complete' 'Your system is up to date.' && date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update" && rm "$LOCK_FILE"
             ;;
         "fedora")
-            xterm -e "sudo dnf upgrade --refresh" && notify-send 'Update Complete' 'Your system is up to date'; date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update"
+            systemd-run --user --quiet --collect konsole -e "sudo dnf upgrade --refresh" && notify-send 'Update Complete' 'Your system is up to date' && date "+%Y-%m-%d %H:%M:%S" > "$CACHE_DIR/previous_update" && rm "$LOCK_FILE"
             echo "Unsupported or unknown distribution: $distro"
             return 1
             ;;
     esac
+
+    # Remove the lock file to signal that the function has been completed
+    # rm "$LOCK_FILE"
 }
 
 check_updates

@@ -1,11 +1,12 @@
 #!/bin/bash
 
+export WORK_DIR=/opt/Assistor
+
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
-export DISPLAY=:1
 host=$(hostname)
-export WORK_DIR=/home/$USER/Documents/programs/bash
 export SCRIPTS=$WORK_DIR/scripts
 export CACHE_DIR="/home/$USER/.cache/assistor" # Define the cache directory
+export LOCK_DIR="$CACHE_DIR/locks"
 
 write_distro_to_cache() {
     # Check for distribution type
